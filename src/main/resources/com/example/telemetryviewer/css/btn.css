@@ -1,0 +1,20 @@
+.buttons {
+    -fx-background-color: #2196F3;
+}
+
+.buttons:hover {
+    -fx-background-color: #004fed;
+}
+
+.buttons:selected {
+    -fx-background-color: #1947fc;
+}
+
+.log_path_btn {
+    -fx-background-color: #1321eb;
+}
+
+.log_path_btn:hover {
+    -fx-background-color: #004fed;
+}
+
