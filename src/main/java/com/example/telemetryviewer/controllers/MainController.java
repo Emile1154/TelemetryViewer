@@ -7,19 +7,27 @@ import com.example.telemetryviewer.models.storage.MagnetData;
 import com.example.telemetryviewer.models.storage.TensionData;
 import com.example.telemetryviewer.service.BinaryReader;
 import javafx.fxml.FXML;
+import javafx.fxml.Initializable;
+import javafx.scene.chart.LineChart;
+import javafx.scene.chart.NumberAxis;
+import javafx.scene.chart.XYChart;
 import javafx.scene.control.Alert;
 import javafx.scene.control.DatePicker;
+import javafx.scene.control.Tooltip;
 import javafx.stage.DirectoryChooser;
 
-import java.io.File;
+import java.io.*;
+import java.net.URL;
 import java.nio.file.Path;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.util.Date;
 import java.util.List;
+import java.util.Objects;
+import java.util.ResourceBundle;
 
-public class MainController {
+public class MainController implements Initializable {
     private String pathToFiles = null;
     private ChartSettings chartSettings;
     private DepthData depth;
@@ -30,11 +38,22 @@ public class MainController {
 
     @FXML
     DatePicker datePicker;
+
+    @FXML
+    LineChart<Number, Number> chart;
     public MainController() {
         this.depth = new DepthData();
         this.tension = new TensionData();
         this.magnet = new MagnetData();
         this.chartSettings = new ChartSettings(ChartType.DEPTH, null);
+
+
+    }
+    @Override
+    public void initialize(URL url, ResourceBundle resourceBundle) {
+        //init chart
+
+
     }
 
     @FXML
@@ -54,8 +73,17 @@ public class MainController {
             showError("Ошибка — требуемые файлы не обнаружены", "в указанной директории не обнаружены файлы с расширением .bin");
             return;
         }
+        File eventLogFile = Objects.requireNonNull(selectedDirectory.listFiles(f -> f.getName().equals("event_log.txt")))[0];
+        if(eventLogFile == null){
+            System.out.println("файл событий не обнаружен");
+            showError("Ошибка — требуемые файлы не обнаружены", "в указанной директории не обнаружен файл event_log.txt");
+            return;
+        }
         pathToFiles = selectedDirectory.getAbsolutePath();
         pathToFiles =  pathToFiles.replace("\\", "/");
+
+        //read file event_log.txt
+
     }
 
     @FXML
@@ -75,7 +103,7 @@ public class MainController {
 
             File file = new File(chartSettings.getFilepath());
             if(! file.exists()){
-                showError("Ошибка — бинарный файл на указанную дату не обнаружен", "Отсутствует файл логирования на дату - " + outputDate);
+                showError("Ошибка — бинарный файл на указанную дату не обнаружен", "Отсутствует файл логирования на дату: " + outputDate);
                 return;
             }
 
@@ -192,5 +220,4 @@ public class MainController {
         alert.show();
 
     }
-
 }
