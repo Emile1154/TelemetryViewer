@@ -16,6 +16,11 @@
 
   <dependencies>
     <dependency>
+      <groupId>org.jfree</groupId>
+      <artifactId>org.jfree.chart.fx</artifactId>
+      <version>2.0.1</version>
+    </dependency>
+    <dependency>
       <groupId>org.openjfx</groupId>
       <artifactId>javafx-controls</artifactId>
       <version>19</version>
@@ -70,6 +75,11 @@
       <artifactId>lombok</artifactId>
       <version>1.18.30</version>
     </dependency>
+    <dependency>
+      <groupId>org.jfree</groupId>
+      <artifactId>jfreechart</artifactId>
+      <version>1.5.4</version>
+    </dependency>
   </dependencies>
 
   <build>
@@ -79,8 +89,8 @@
         <artifactId>maven-compiler-plugin</artifactId>
         <version>3.11.0</version>
         <configuration>
-          <source>21</source>
-          <target>21</target>
+          <source>13</source>
+          <target>13</target>
         </configuration>
       </plugin>
       <plugin>
@@ -92,7 +102,7 @@
             <!-- Default configuration for running with: mvn clean javafx:run -->
             <id>default-cli</id>
             <configuration>
-              <mainClass>com.example.telemetryviewer/com.example.telemetryviewer.TelemetryView</mainClass>
+              <mainClass>com.example.telemetryviewer/com.example.telemetryviewer.MavenApp</mainClass>
               <launcher>app</launcher>
               <jlinkZipName>app</jlinkZipName>
               <jlinkImageName>app</jlinkImageName>

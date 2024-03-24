@@ -1,216 +1,308 @@
 package com.example.telemetryviewer.controllers;
 
-import com.example.telemetryviewer.models.chart.ChartSettings;
-import com.example.telemetryviewer.models.chart.ChartType;
-import com.example.telemetryviewer.models.storage.DepthData;
-import com.example.telemetryviewer.models.storage.MagnetData;
-import com.example.telemetryviewer.models.storage.TensionData;
+import com.example.telemetryviewer.models.ChartType;
+import com.example.telemetryviewer.models.TelemetryData;
+import com.example.telemetryviewer.models.TelemetryIndex;
 import com.example.telemetryviewer.service.BinaryReader;
+import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
-import javafx.scene.chart.LineChart;
-import javafx.scene.chart.NumberAxis;
-import javafx.scene.chart.XYChart;
-import javafx.scene.control.Alert;
-import javafx.scene.control.DatePicker;
-import javafx.scene.control.Tooltip;
-import javafx.stage.DirectoryChooser;
+import javafx.scene.control.*;
+import javafx.scene.layout.AnchorPane;
+import javafx.scene.layout.VBox;
+import javafx.scene.text.Font;
+import javafx.stage.FileChooser;
+import org.jfree.chart.ChartFactory;
+import org.jfree.chart.JFreeChart;
+import org.jfree.chart.axis.DateAxis;
+import org.jfree.chart.fx.ChartViewer;
+import org.jfree.chart.plot.XYPlot;
+import org.jfree.data.time.RegularTimePeriod;
+import org.jfree.data.time.Second;
+import org.jfree.data.time.TimeSeries;
+import org.jfree.data.time.TimeSeriesCollection;
 
-import java.io.*;
+import java.io.File;
 import java.net.URL;
-import java.nio.file.Path;
-import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
-import java.util.Date;
-import java.util.List;
-import java.util.Objects;
 import java.util.ResourceBundle;
 
-public class MainController implements Initializable {
-    private String pathToFiles = null;
-    private ChartSettings chartSettings;
-    private DepthData depth;
-    private TensionData tension;
-    private MagnetData magnet;
 
-    private String outputDate = null;
+public class MainController implements Initializable {
+    private String filepath;
+    private BinaryReader binaryReader = null;
+    private TelemetryIndex[] index;
+    private TelemetryData currentData;
+    private TelemetryIndex currentIndex;
+    private LocalDate selectedDate;
+    private ChartType chartType;
+
+    TimeSeriesCollection dataset;
+    private JFreeChart chart;
+
+    @FXML
+    AnchorPane chartPane;
+
+    @FXML
+    ChartViewer chartViewer;
+
+    TimeSeries depthSeries;
+    TimeSeries tensionSeries;
+    TimeSeries magnetSeries;
+
+    private void createChart() {
+        dataset = new TimeSeriesCollection();
+        TimeSeries series = new TimeSeries("");
+
+        String title = "Укажите файл c расширением .bin и выберите дату и событие";
+        chart = ChartFactory.createTimeSeriesChart(
+                title,
+                "ВРЕМЯ (ЧЧ:ММ:СС)",
+                "ЗНАЧЕНИЕ",
+                dataset,
+                false,
+                true,
+                true
+        );
+
+        XYPlot plot = (XYPlot) chart.getPlot();
+
+        plot.setDomainPannable(true);
+
+        DateAxis axis = (DateAxis) plot.getDomainAxis();
+
+        axis.setAutoRange(true);
+        axis.setDateFormatOverride(new SimpleDateFormat("HH:mm:ss"));
+
+        chartViewer = new ChartViewer(chart, true);
+
+//        chartViewer.setMaxWidth(Double.MAX_VALUE);
+//        chartViewer.setMaxHeight(Double.MAX_VALUE);
+        chartPane.getChildren().add(chartViewer);
+    }
 
     @FXML
     DatePicker datePicker;
-
     @FXML
-    LineChart<Number, Number> chart;
+    VBox buttonContainer;
+    @FXML
+    ScrollPane scrollPane;
+    @FXML
+    VBox mainVbox;
+
     public MainController() {
-        this.depth = new DepthData();
-        this.tension = new TensionData();
-        this.magnet = new MagnetData();
-        this.chartSettings = new ChartSettings(ChartType.DEPTH, null);
+        this.binaryReader = new BinaryReader();
+        try {
+            this.binaryReader.init();
+        }catch (RuntimeException e){
+            showError("Не удалось загрузить библиотеку filedecoder.dll"," убедитесь что файл filedecoder.dll находится в папке с jar файлом");
+        }
 
+        this.chartType = ChartType.DEPTH;
 
+        depthSeries = new TimeSeries("Глубина");
+        tensionSeries = new TimeSeries("Натяжение");
+        magnetSeries = new TimeSeries("ДМГ");
     }
+
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {
-        //init chart
+        buttonContainer = new VBox();
+        scrollPane.setContent(buttonContainer);
+        datePicker.setDayCellFactory(picker -> new DateCell(){
+            @Override
+            public void updateItem(LocalDate date, boolean empty) {
+                super.updateItem(date, empty);
+                int day   = date.getDayOfMonth();
+                int month = date.getMonthValue();
+                int year  = date.getYear();
 
+                boolean isAvailable = false;
 
+                if(index != null) {
+                    for (TelemetryIndex telemetryIndex : index) {
+                        if (telemetryIndex.checkIsAvailable(day, month, year)) {
+                            isAvailable = true;
+                            break;
+                        }
+                    }
+                }
+                if(! isAvailable){
+                    setDisable(true);
+                    setStyle("-fx-background-color: #ffc0cb;");
+                }
+            }
+        });
+
+        createChart();
+
+        mainVbox.heightProperty().addListener((observable, oldValue, newValue) -> {
+            chartViewer.setPrefHeight(newValue.doubleValue()/1.11);
+        });
+        mainVbox.widthProperty().addListener((observable, oldValue, newValue) -> {
+            chartViewer.setPrefWidth((newValue.doubleValue()/1.3));
+        });
     }
 
     @FXML
     protected void buttonEventFile(){
-        System.out.println("check");
-        DirectoryChooser directoryChooser = new DirectoryChooser();
-        File selectedDirectory = directoryChooser.showDialog(null);
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("ALL FILES","*.bin"));
 
-        if(selectedDirectory == null){
-            return;
-        }
+        File binaryFile = fileChooser.showOpenDialog(null);
 
-        File[] files = selectedDirectory.listFiles(f -> f.getName().endsWith(".bin"));
-
-        if(files.length == 0 || files == null){
+        if(binaryFile == null){
             System.out.println("файлы не обнаружены");
-            showError("Ошибка — требуемые файлы не обнаружены", "в указанной директории не обнаружены файлы с расширением .bin");
+            showError("Ошибка — требуемый файл не обнаружен", "не обнаружен файл с расширением .bin");
             return;
         }
-        File eventLogFile = Objects.requireNonNull(selectedDirectory.listFiles(f -> f.getName().equals("event_log.txt")))[0];
-        if(eventLogFile == null){
-            System.out.println("файл событий не обнаружен");
-            showError("Ошибка — требуемые файлы не обнаружены", "в указанной директории не обнаружен файл event_log.txt");
-            return;
+
+        this.filepath = binaryFile.getAbsolutePath();
+        this.filepath = filepath.replace("\\", "/");
+
+        System.out.println("filepath: " + filepath);
+
+        index = this.binaryReader.readData(filepath);
+
+        for (TelemetryIndex telemetryIndex : index) {
+            System.out.println(telemetryIndex.toString());
         }
-        pathToFiles = selectedDirectory.getAbsolutePath();
-        pathToFiles =  pathToFiles.replace("\\", "/");
-
-        //read file event_log.txt
-
     }
+
 
     @FXML
     protected void selectDepth(){
-        if(this.chartSettings.getChartType() != ChartType.DEPTH){
-            chartSettings.setChartType(ChartType.DEPTH);
-
-            if(pathToFiles == null){
-                showError("Ошибка — не выбрана директория с файлами", "Укажите папку с файлами .bin");
+        if(chartType != ChartType.DEPTH ){
+            chartType = ChartType.DEPTH;
+            if(filepath == null){
+                showError("Ошибка — не выбран бинарный файл", "Укажите путь к файлу .bin");
                 return;
             }
 
-            if(outputDate == null){
+            if(selectedDate == null){
                 showError("Ошибка — нужно выбрать дату", "Укажите дату");
                 return;
             }
 
-            File file = new File(chartSettings.getFilepath());
-            if(! file.exists()){
-                showError("Ошибка — бинарный файл на указанную дату не обнаружен", "Отсутствует файл логирования на дату: " + outputDate);
+            if(currentData == null){
+                showError("Ошибка — выберете событие", "События находятся в журнале событий по указанной дате");
                 return;
             }
-
-            BinaryReader binaryReader = new BinaryReader(depth);
-            binaryReader.readFile(Path.of(chartSettings.getFilepath()));
+            chart.setTitle("Функция глубины: метры/чч:мм:сс");
+            dataset.addSeries(depthSeries);
         }
     }
-
     @FXML
     protected void selectTension(){
-        if(this.chartSettings.getChartType() != ChartType.TENSION){
-            chartSettings.setChartType(ChartType.TENSION);
-
-            if(pathToFiles == null){
+        if(chartType != ChartType.TENSION ){
+            chartType = ChartType.TENSION;
+            if(filepath == null){
                 showError("Ошибка — не выбрана директория с файлами", "Укажите папку с файлами .bin");
                 return;
             }
 
-            if(outputDate == null){
+            if(selectedDate == null){
                 showError("Ошибка — нужно выбрать дату", "Укажите дату");
                 return;
             }
-
-            File file = new File(chartSettings.getFilepath());
-            if(! file.exists()){
-                showError("Ошибка — бинарный файл на указанную дату не обнаружен", "Отсутствует файл логирования на дату - " + outputDate);
+            if(currentData == null){
+                showError("Ошибка — выберете событие", "События находятся в журнале событий по указанной дате");
                 return;
             }
 
-            BinaryReader binaryReader = new BinaryReader(tension);
-            binaryReader.readFile(Path.of(chartSettings.getFilepath()));
+            chart.setTitle("Функция натяжения: кг/чч:мм:сс");
+            dataset.addSeries(tensionSeries);
         }
     }
-
     @FXML
     protected void selectMagnet() {
-        if (this.chartSettings.getChartType() != ChartType.MAGNET) {
-            chartSettings.setChartType(ChartType.MAGNET);
-
-            if(pathToFiles == null){
+        if (chartType != ChartType.MAGNET ) {
+            chartType = ChartType.MAGNET;
+            if(filepath == null){
                 showError("Ошибка — не выбрана директория с файлами", "Укажите папку с файлами .bin");
                 return;
             }
 
-            if(outputDate == null){
+            if(selectedDate == null){
                 showError("Ошибка — нужно выбрать дату", "Укажите дату");
                 return;
             }
-
-            File file = new File(chartSettings.getFilepath());
-            if(! file.exists()){
-                showError("Ошибка — бинарный файл на указанную дату не обнаружен", "Отсутствует файл логирования на дату - " + outputDate);
+            if(currentData == null){
+                showError("Ошибка — выберете событие", "События находятся в журнале событий по указанной дате");
                 return;
             }
-
-            BinaryReader binaryReader = new BinaryReader(magnet);
-            binaryReader.readFile(Path.of(chartSettings.getFilepath()));
+            chart.setTitle("Функция магнитного поля: метка/чч:мм:сс");
+            dataset.addSeries(magnetSeries);
         }
     }
-
     @FXML
     protected void calendarEvent(){
-        LocalDate selectedDate = datePicker.getValue();
-        if(selectedDate == null){
+        //clear button container
+        if(! buttonContainer.getChildren().isEmpty()){
+            buttonContainer.getChildren().removeAll(buttonContainer.getChildren());
+        }
+        selectedDate = datePicker.getValue();
+        if(selectedDate == null) {
             return;
         }
-        SimpleDateFormat formatInput = new SimpleDateFormat("yyyy-MM-dd");
-        SimpleDateFormat formatOutput = new SimpleDateFormat("d-M-yyyy");
-        try{
-            Date inputDate = formatInput.parse(selectedDate.toString());
-            outputDate = formatOutput.format(inputDate);
-
-            chartSettings.setFilepath(pathToFiles + "/" + outputDate + ".bin");
-
-            //check file is exist
-            if(pathToFiles == null){
-                showError("Ошибка — не выбрана директория с файлами", "Укажите папку с файлами .bin");
-                return;
+        for(TelemetryIndex telemetryIndex : index){
+            if(! telemetryIndex.checkIsAvailable(selectedDate.getDayOfMonth(), selectedDate.getMonthValue(), selectedDate.getYear())){
+                continue;
             }
-
-            File file = new File(chartSettings.getFilepath());
-            if(! file.exists()){
-                showError("Ошибка — бинарный файл на указанную дату не обнаружен", "Отсутствует файл логирования на дату - " + outputDate);
-                return;
-            }
-            //read new series for current date
-            BinaryReader binaryReader;
-            ChartType chartType = chartSettings.getChartType();
-            if(chartType == ChartType.DEPTH){
-                binaryReader = new BinaryReader(depth);
-            }
-            else if(chartType == ChartType.TENSION){
-                binaryReader = new BinaryReader(tension);
-            }
-            else if (chartType == ChartType.MAGNET){
-                binaryReader = new BinaryReader(magnet);
-            }
-            else {
-                return;
-            }
-            binaryReader.readFile( Path.of(chartSettings.getFilepath()) );
-
-        }catch (ParseException e){
-            e.printStackTrace();
+            Button button = new Button();
+            button.setText(telemetryIndex.toString());
+            button.setFont(Font.font(14));
+            button.setMinSize(270, 20);
+            button.setOnAction(this::handleLogButtons);
+            buttonContainer.getChildren().add(button);
         }
     }
+    private void handleLogButtons(ActionEvent event){
+        Button clickedButton = (Button) event.getSource();
+        for(TelemetryIndex telemetryIndex : index){
+            if(clickedButton.getText().equals(telemetryIndex.toString())){
+                currentIndex = telemetryIndex;
+                break;
+            }
+        }
+        if(currentIndex == null){
+            showError("Ошибка — не найдена запись в бинарном файле", null);
+            return;
+        }
+        currentData = binaryReader.getData((int)currentIndex.start_address,(int)currentIndex.end_address);
 
+        dataset.removeAllSeries();
+
+        depthSeries.clear();
+        tensionSeries.clear();
+        magnetSeries.clear();
+
+        RegularTimePeriod timeAxis = new Second(
+                currentIndex.second,
+                currentIndex.minute,
+                currentIndex.hour,
+                currentIndex.date,
+                currentIndex.month,
+                currentIndex.year
+        );
+        for(int i = 0; i < currentData.depth.length ; i++){
+            depthSeries.add(timeAxis, currentData.depth[i]);
+            tensionSeries.add(timeAxis, currentData.tension[i]);
+            magnetSeries.add(timeAxis, currentData.magnet[i]);
+            timeAxis = timeAxis.next();
+        }
+        if(chartType == ChartType.DEPTH){
+            chart.setTitle("Функция глубины: метры/чч:мм:сс");
+            dataset.addSeries(depthSeries);
+        }else if (chartType == ChartType.TENSION){
+            chart.setTitle("Функция натяжения: кг/чч:мм:сс");
+            dataset.addSeries(tensionSeries);
+        }else if(chartType == ChartType.MAGNET){
+            chart.setTitle("Функция магнитных меток: метка/чч:мм:сс");
+            dataset.addSeries(magnetSeries);
+        }
+    }
 
     private void showError(String title, String description) {
         Alert alert = new Alert(Alert.AlertType.ERROR);

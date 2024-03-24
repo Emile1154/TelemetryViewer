@@ -7,6 +7,9 @@ module com.example.telemetryviewer {
     requires org.kordamp.bootstrapfx.core;
     requires static lombok;
 
+    requires org.jfree.chart.fx;
+    requires org.jfree.fxgraphics2d;
+    requires org.jfree.jfreechart;
     opens com.example.telemetryviewer.controllers to javafx.fxml;
     exports com.example.telemetryviewer;
 }

@@ -3,15 +3,16 @@
 <?import com.gluonhq.charm.glisten.control.BottomNavigation?>
 <?import com.gluonhq.charm.glisten.control.BottomNavigationButton?>
 <?import javafx.geometry.Insets?>
-<?import javafx.scene.chart.CategoryAxis?>
-<?import javafx.scene.chart.LineChart?>
-<?import javafx.scene.chart.NumberAxis?>
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.DatePicker?>
+<?import javafx.scene.control.Label?>
 <?import javafx.scene.control.Menu?>
 <?import javafx.scene.control.MenuBar?>
 <?import javafx.scene.control.MenuItem?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.SplitPane?>
 <?import javafx.scene.effect.Blend?>
+<?import javafx.scene.layout.AnchorPane?>
 <?import javafx.scene.layout.ColumnConstraints?>
 <?import javafx.scene.layout.FlowPane?>
 <?import javafx.scene.layout.GridPane?>
@@ -19,23 +20,18 @@
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Font?>
 
-<VBox alignment="CENTER" minHeight="480.0" minWidth="600.0" prefHeight="800.0" prefWidth="1024.0" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.example.telemetryviewer.controllers.MainController">
+<VBox fx:id="mainVbox" alignment="CENTER" minHeight="480.0" minWidth="600.0" prefHeight="800.0" prefWidth="1024.0" xmlns="http://javafx.com/javafx/13" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.example.telemetryviewer.controllers.MainController">
 
    <MenuBar>
      <menus>
-       <Menu mnemonicParsing="false" text="File">
+       <Menu mnemonicParsing="false" text="Файл">
          <items>
-           <MenuItem mnemonicParsing="false" text="Close" />
+           <MenuItem mnemonicParsing="false" text="Полный журнал событий" />
          </items>
        </Menu>
-       <Menu mnemonicParsing="false" text="Edit">
+       <Menu mnemonicParsing="false" text="Помощь">
          <items>
-           <MenuItem mnemonicParsing="false" text="Delete" />
-         </items>
-       </Menu>
-       <Menu mnemonicParsing="false" text="Help">
-         <items>
-           <MenuItem mnemonicParsing="false" text="About" />
+           <MenuItem mnemonicParsing="false" text="О программе" />
          </items>
        </Menu>
      </menus>
@@ -50,14 +46,6 @@
          <RowConstraints percentHeight="6.0" vgrow="ALWAYS" />
      </rowConstraints>
       <children>
-        <LineChart GridPane.rowIndex="1">
-          <xAxis>
-            <CategoryAxis side="BOTTOM" />
-          </xAxis>
-          <yAxis>
-            <NumberAxis side="LEFT" />
-          </yAxis>
-        </LineChart>
          <GridPane GridPane.rowIndex="2">
            <columnConstraints>
              <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
@@ -100,22 +88,42 @@
                            <Blend />
                         </effect>
                         <FlowPane.margin>
-                           <Insets left="5.0" top="5.0" />
+                           <Insets top="5.0" />
                         </FlowPane.margin>
                        </Button>
                   </children>
                 </FlowPane>
-               <FlowPane prefHeight="5.0" prefWidth="5.0" style="-fx-background-color: #2196F3;" GridPane.columnIndex="2">
-                  <children>
-                       <DatePicker fx:id="datePicker" onAction="#calendarEvent" prefHeight="33.0" prefWidth="186.0" promptText="Выбрать дату">
-                        <FlowPane.margin>
-                           <Insets left="25.0" top="5.0" />
-                        </FlowPane.margin>
-                     </DatePicker>
-                  </children>
-               </FlowPane>
+               <FlowPane prefHeight="5.0" prefWidth="5.0" style="-fx-background-color: #2196F3;" GridPane.columnIndex="2" />
             </children>
          </GridPane>
+         <SplitPane dividerPositions="0.2" prefHeight="160.0" prefWidth="200.0" GridPane.rowIndex="1">
+           <items>
+             <AnchorPane maxWidth="280.0" minHeight="0.0" minWidth="280.0" prefHeight="727.0" prefWidth="280.0" style="-fx-background-color: #2196F3;" SplitPane.resizableWithParent="false">
+                  <children>
+                       <DatePicker fx:id="datePicker" layoutX="27.0" layoutY="29.0" onAction="#calendarEvent" prefHeight="25.0" prefWidth="118.0" promptText="Выбрать дату" AnchorPane.leftAnchor="40.0" AnchorPane.topAnchor="20.0" />
+                     <ScrollPane fx:id="scrollPane" hbarPolicy="NEVER" layoutX="1.0" layoutY="110.0" prefHeight="551.0" prefWidth="200.0" AnchorPane.leftAnchor="4.0" AnchorPane.rightAnchor="4.0">
+                        <content>
+                           <VBox fx:id="buttonContainer" prefHeight="555.0" prefWidth="192.0">
+                               <children>
+
+                               </children>
+                           </VBox>
+                        </content>
+                     </ScrollPane>
+                     <Label layoutX="1.0" layoutY="63.0" prefHeight="46.0" prefWidth="191.0" text="Журнал событий по указанной дате" textAlignment="CENTER" textFill="WHITE" wrapText="true" AnchorPane.leftAnchor="1.0" AnchorPane.rightAnchor="10.0" AnchorPane.topAnchor="60.0">
+                        <font>
+                           <Font name="Times New Roman" size="18.0" />
+                        </font>
+                     </Label>
+                  </children>
+               </AnchorPane>
+               <AnchorPane fx:id="chartPane" minHeight="0.0" minWidth="0.0" prefHeight="160.0" prefWidth="100.0">
+                  <children>
+
+                  </children>
+               </AnchorPane>
+           </items>
+         </SplitPane>
       </children>
    </GridPane>
 </VBox>
