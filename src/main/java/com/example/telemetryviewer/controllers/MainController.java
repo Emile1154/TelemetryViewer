@@ -1,17 +1,26 @@
 package com.example.telemetryviewer.controllers;
 
 import com.example.telemetryviewer.models.ChartType;
+import com.example.telemetryviewer.models.InfoWell;
 import com.example.telemetryviewer.models.TelemetryData;
 import com.example.telemetryviewer.models.TelemetryIndex;
 import com.example.telemetryviewer.service.BinaryReader;
+import com.example.telemetryviewer.service.LogASCIIStandart;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Font;
+import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
+import javafx.stage.Stage;
+import javafx.stage.Window;
+
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.JFreeChart;
 import org.jfree.chart.axis.DateAxis;
@@ -23,20 +32,26 @@ import org.jfree.data.time.TimeSeries;
 import org.jfree.data.time.TimeSeriesCollection;
 
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.util.ResourceBundle;
+import java.util.prefs.Preferences;
 
 
 public class MainController implements Initializable {
     private String filepath;
     private BinaryReader binaryReader = null;
     private TelemetryIndex[] index;
-    private TelemetryData currentData;
-    private TelemetryIndex currentIndex;
+    protected TelemetryData currentData;
+    protected TelemetryIndex currentIndex;
     private LocalDate selectedDate;
     private ChartType chartType;
+
+    protected LogASCIIStandart las;
 
     TimeSeriesCollection dataset;
     private JFreeChart chart;
@@ -46,6 +61,8 @@ public class MainController implements Initializable {
 
     @FXML
     ChartViewer chartViewer;
+
+    private final String LAST_USED_BINARY_PATH_KEY = "path_binary";
 
     TimeSeries depthSeries;
     TimeSeries tensionSeries;
@@ -101,9 +118,11 @@ public class MainController implements Initializable {
 
         this.chartType = ChartType.DEPTH;
 
+        las = new LogASCIIStandart();
+
         depthSeries = new TimeSeries("Глубина");
         tensionSeries = new TimeSeries("Натяжение");
-        magnetSeries = new TimeSeries("ДМГ");
+        magnetSeries = new TimeSeries("ДММ");
     }
 
     @Override
@@ -146,10 +165,29 @@ public class MainController implements Initializable {
     }
 
     @FXML
-    protected void buttonEventFile(){
-        FileChooser fileChooser = new FileChooser();
-        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("ALL FILES","*.bin"));
+    protected void exportLAS() throws IOException {
+        if(currentData == null){
+            showError("Ошибка — выберете данные", "Данные находятся в журнале событий по указанной дате");
+            return;
+        }
+        FXMLLoader fxmlLoader = new FXMLLoader();
+        Parent root = FXMLLoader.load(getClass().getResource("/com/example/telemetryviewer/las_form.fxml"));
+        Stage stage = new Stage();
+        stage.setTitle("Экспорт в LAS");
+        stage.setScene(new Scene(root, 550, 400));
+        stage.setResizable(false);
+        stage.show();
+    }
 
+
+
+    @FXML
+    protected void buttonEventFile(){
+        Preferences preferences = Preferences.userRoot().node(getClass().getName());
+        FileChooser fileChooser = new FileChooser();
+        System.out.println(preferences.get(LAST_USED_BINARY_PATH_KEY, System.getProperty("user.home")));
+        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("ALL FILES","*.bin"));
+        fileChooser.setInitialDirectory(new File(new File(preferences.get(LAST_USED_BINARY_PATH_KEY, System.getProperty("user.home"))).getParent()));
         File binaryFile = fileChooser.showOpenDialog(null);
 
         if(binaryFile == null){
@@ -159,7 +197,9 @@ public class MainController implements Initializable {
         }
 
         this.filepath = binaryFile.getAbsolutePath();
+        preferences.put(LAST_USED_BINARY_PATH_KEY, filepath);
         this.filepath = filepath.replace("\\", "/");
+
 
         System.out.println("filepath: " + filepath);
 
@@ -304,7 +344,7 @@ public class MainController implements Initializable {
         }
     }
 
-    private void showError(String title, String description) {
+    protected void showError(String title, String description) {
         Alert alert = new Alert(Alert.AlertType.ERROR);
         alert.setTitle(title);
         alert.setHeaderText("Подробности ошибки:");

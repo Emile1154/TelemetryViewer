@@ -7,6 +7,7 @@ import com.example.telemetryviewer.models.TelemetryIndex;
 public class BinaryReader {
     public void init() throws RuntimeException{
         String nativeLib = System.getProperty("user.dir") + "/filedecoder.dll";
+        System.out.println("nativeLib: " + nativeLib);
         try {
             System.load(nativeLib);
         } catch (UnsatisfiedLinkError e) {
