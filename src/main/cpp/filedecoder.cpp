@@ -1,4 +1,4 @@
-#include <com_example_telemetryviewer_service_BinaryReader.h>
+#include "filedecoder.h"
 #include <stdint.h>
 #include <stdio.h>
 #include <cstring>
