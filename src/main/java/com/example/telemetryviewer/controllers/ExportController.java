@@ -55,7 +55,13 @@ public class ExportController extends MainController implements Initializable {
         Preferences preferences = Preferences.userRoot().node(getClass().getName());
         DirectoryChooser directoryChooser = new DirectoryChooser();
         directoryChooser.setInitialDirectory(new File(preferences.get(LAST_USED_LAS_PATH_KEY, System.getProperty("user.home"))));
-        File directory = directoryChooser.showDialog(null);
+        File directory = null;
+        try {
+            directory = directoryChooser.showDialog(null);
+        }catch (IllegalArgumentException e){
+            preferences.put(LAST_USED_LAS_PATH_KEY, System.getProperty("user.home"));
+            return;
+        }
         if(directory == null){
             showError("Ошибка — путь не выбран", "Укажите папку для экспорта");
             return;
