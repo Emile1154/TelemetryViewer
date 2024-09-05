@@ -22,7 +22,12 @@ public class LogASCIIStandart {
     }
 
     public void convertDataToLAS(TelemetryIndex index, TelemetryData data, InfoWell info) throws FileNotFoundException, UnsupportedEncodingException {
+        if(index == null) {
+            System.out.println("index is null");
+            return;
+        }
         String filename = filepath +"/"+index.event+ "_"+index.date+"-"+index.month+"-"+index.year+ "_" +index.hour+"-"+index.minute + "_" +index.end_hour+"-"+index.end_minute +".las";
+
         PrintWriter writer = new PrintWriter(filename, "UTF-8");
         writer.println("~Version Information");
         writer.println("VERS. 1.20: LOG ASCII STANDARD VERSION 1.2");
@@ -58,10 +63,12 @@ public class LogASCIIStandart {
         for (int i = 0; i < data.depth.length; i++) {
             float velocity = 0;
             String time = hh_mm_ss_sum_seconds(index, i);
-            if(i > 1) {
+            if(i >= 1) {
                 velocity = abs(data.depth[i] - data.depth[i - 1])*3600;  // m/hour
+                velocity = (float) Math.round(velocity * 10) / 10;
             }
-            writer.println(data.depth[i] + " " + time + " " + velocity + " " + data.tension[i]);
+            float round_depth = (float) Math.round(data.depth[i] * 100) / 100;
+            writer.println(round_depth + " " + time + " " + velocity + " " + data.tension[i]);
         }
         writer.close();
     }

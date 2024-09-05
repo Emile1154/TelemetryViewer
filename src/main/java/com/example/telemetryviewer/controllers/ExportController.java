@@ -1,6 +1,8 @@
 package com.example.telemetryviewer.controllers;
 
 import com.example.telemetryviewer.models.InfoWell;
+import com.example.telemetryviewer.models.TelemetryData;
+import com.example.telemetryviewer.models.TelemetryIndex;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.stage.DirectoryChooser;
@@ -58,10 +60,17 @@ public class ExportController extends MainController implements Initializable {
             showError("Ошибка — путь не выбран", "Укажите папку для экспорта");
             return;
         }
+        preferences.put(LAST_USED_LAS_PATH_KEY, directory.getAbsolutePath());
         las.filepath = preferences.get(LAST_USED_LAS_PATH_KEY, System.getProperty("user.home"));
         pathLabel.setText(las.filepath);
+    }
 
-        preferences.put(LAST_USED_LAS_PATH_KEY, las.filepath);
+    public void setData(TelemetryData data){
+        this.currentData = data;
+    }
+
+    public void setIndex(TelemetryIndex index){
+        this.currentIndex = index;
     }
 
     @FXML
@@ -70,7 +79,6 @@ public class ExportController extends MainController implements Initializable {
             showError("Ошибка — путь не выбран", "Укажите папку для экспорта");
             return;
         }
-
         InfoWell info = new InfoWell();
 
         info.well = well.getText();
@@ -83,9 +91,16 @@ public class ExportController extends MainController implements Initializable {
         info.stat = stat.getText();
 
         try {
-            las.convertDataToLAS(currentIndex, currentData, info);
+            las.convertDataToLAS(this.currentIndex, this.currentData, info);
+            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+            alert.setTitle("Успешно");
+            alert.setHeaderText("Экспорт завершен");
+            alert.setContentText("Данные успешно экспортированы");
+            alert.show();
         }catch (Exception e){
             showError("Не удалось экспортировать данные", e.getMessage());
+//            throw new Exception(e.getMessage(), e.getCause());
         }
+
     }
 }

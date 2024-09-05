@@ -38,6 +38,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
+import java.util.Objects;
 import java.util.ResourceBundle;
 import java.util.prefs.Preferences;
 
@@ -46,12 +47,13 @@ public class MainController implements Initializable {
     private String filepath;
     private BinaryReader binaryReader = null;
     private TelemetryIndex[] index;
-    protected TelemetryData currentData;
-    protected TelemetryIndex currentIndex;
+
     private LocalDate selectedDate;
     private ChartType chartType;
 
-    protected LogASCIIStandart las;
+    public LogASCIIStandart las;
+    public TelemetryData currentData;
+    public TelemetryIndex currentIndex;
 
     TimeSeriesCollection dataset;
     private JFreeChart chart;
@@ -166,12 +168,15 @@ public class MainController implements Initializable {
 
     @FXML
     protected void exportLAS() throws IOException {
-        if(currentData == null){
+        if(currentData == null || currentIndex == null){
             showError("Ошибка — выберете данные", "Данные находятся в журнале событий по указанной дате");
             return;
         }
-        FXMLLoader fxmlLoader = new FXMLLoader();
-        Parent root = FXMLLoader.load(getClass().getResource("/com/example/telemetryviewer/las_form.fxml"));
+        FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("/com/example/telemetryviewer/las_form.fxml"));
+        Parent root = fxmlLoader.load();
+        ExportController controller = fxmlLoader.getController();
+        controller.setData(currentData);
+        controller.setIndex(currentIndex);
         Stage stage = new Stage();
         stage.setTitle("Экспорт в LAS");
         stage.setScene(new Scene(root, 550, 400));
@@ -350,6 +355,5 @@ public class MainController implements Initializable {
         alert.setHeaderText("Подробности ошибки:");
         alert.setContentText(description);
         alert.show();
-
     }
 }

@@ -25,7 +25,7 @@ public class TelemetryIndex {
 
     @Override
     public String toString() {
-        return String.format("Событие: %s с %02d:%02d:%02d по %02d:%02d:%02d", event, hour, minute, second, end_hour, end_minute, end_second);
+        return String.format("%s с %02d:%02d:%02d по %02d:%02d:%02d", event, hour, minute, second, end_hour, end_minute, end_second);
     }
     public boolean checkIsAvailable(int day, int month, int year) {
         return day == date && month == this.month && year == this.year;
